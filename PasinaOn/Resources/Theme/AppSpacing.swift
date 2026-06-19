@@ -1,0 +1,17 @@
+//
+//  AppSpacing.swift
+//  PasinaOn
+//
+//  Created by Rizki Fitriani on 15/06/26.
+//
+
+import SwiftUI
+
+enum AppSpacing {
+
+    static let xs: CGFloat = 4
+    static let sm: CGFloat = 8
+    static let md: CGFloat = 16
+    static let lg: CGFloat = 24
+    static let xl: CGFloat = 32
+}
