@@ -17,7 +17,7 @@ struct EntryFormView: View {
     
     @State private var title = ""
     
-    @State private var selectedTopic = ""
+    @State private var selectedTopic: String
     
     @State private var reflection = ""
     
@@ -25,11 +25,24 @@ struct EntryFormView: View {
     
     @State private var isCompleted = false
     
+    @State private var hasTriedSave = false
+    
     @Query(
         sort: \LearningGoal.title
     )
-    private var goals: [LearningGoal]
     
+    private var goals: [LearningGoal]
+    init(
+        selectedGoal: LearningGoal? = nil
+    ) {
+
+        self.selectedGoal = selectedGoal
+
+        _selectedTopic = State(
+            initialValue:
+                selectedGoal?.title ?? ""
+        )
+    }
     var body: some View {
 
         ScrollView {
@@ -50,22 +63,20 @@ struct EntryFormView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             
-//                ToolbarItem(placement: .topBarLeading) {
-//
-//                    Button("Cancel") {
-//                        dismiss()
-//                    }
-//                }
-            
             ToolbarItem(placement: .topBarTrailing) {
                 
                 Button("Save") {
-                    saveEntry()
+
+                    hasTriedSave = true
+
+                    if canSave {
+                        saveEntry()
+                    }
                 }
                 .fontWeight(.semibold)
-                .disabled(!canSave)
             }
         }
+        
     }
     
     private var canSave: Bool {
@@ -110,29 +121,6 @@ struct EntryFormView: View {
         dismiss()
     }
     
-//    var body: some View {
-//        
-//        NavigationStack {
-//            
-//            ScrollView {
-//                
-//                VStack(spacing: 24) {
-//                    
-//                    learningInformationSection
-//                    
-//                    reflectionSection
-//                    
-//                    dateStatusSection
-//                    
-//                    saveButton
-//                }
-//                .padding()
-//            }
-//            .navigationTitle("New Entry")
-//            .navigationBarTitleDisplayMode(.inline)
-//
-//        }
-//    }
     
     private var learningInformationSection: some View {
         
@@ -141,16 +129,26 @@ struct EntryFormView: View {
             spacing: 16
         ) {
             
-            Text("LEARNING INFORMATION")
+            Text("Learning Information")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundStyle(.secondary)
             
-            TextField(
-                "What did you work on?",
-                text: $title
-            )
-            .textFieldStyle(.roundedBorder)
+            VStack(alignment: .leading, spacing: 4) {
+
+                TextField(
+                    "What did you work on?",
+                    text: $title
+                )
+                .textFieldStyle(.roundedBorder)
+
+                if showTitleError {
+
+                    Text("Please enter what you learned.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
             
             topicSection
         }
@@ -169,7 +167,9 @@ struct EntryFormView: View {
         ) {
             
             Text("Topic")
-                .font(.headline)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
 
             if goals.isEmpty {
 
@@ -178,22 +178,16 @@ struct EntryFormView: View {
 
             } else {
 
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 100))
-                    ]
-                ) {
-
+                FlowLayout {
                     ForEach(goals) { goal in
 
                         Button {
-
                             selectedTopic = goal.title
-
                         } label: {
 
                             Text(goal.title)
                                 .fontWeight(.semibold)
+                                .lineLimit(1)
                                 .foregroundStyle(
                                     selectedTopic == goal.title
                                     ? .white
@@ -214,6 +208,19 @@ struct EntryFormView: View {
         }
     }
     
+    private var validationMessage: String {
+
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Please enter what you learned."
+        }
+
+        if selectedTopic.isEmpty {
+            return "Please select a topic."
+        }
+
+        return ""
+    }
+    
     private var reflectionSection: some View {
         
         VStack(
@@ -221,7 +228,7 @@ struct EntryFormView: View {
             spacing: 16
         ) {
             
-            Text("REFLECTION")
+            Text("Reflection")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundStyle(.secondary)
@@ -230,8 +237,19 @@ struct EntryFormView: View {
                 text: $reflection
             )
             .frame(minHeight: 180)
-            .lineLimit(8)
-            .textFieldStyle(.roundedBorder)
+            .scrollContentBackground(.hidden)
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        Color.gray.opacity(0.2),
+                        lineWidth: 1
+                    )
+            )
         }
         .padding()
         .background(AppColor.cardBackground)
@@ -249,6 +267,7 @@ struct EntryFormView: View {
                 selection: $date,
                 displayedComponents: .date
             )
+            .datePickerStyle(.compact)
             
             Toggle(
                 "Completed Session",
@@ -262,29 +281,61 @@ struct EntryFormView: View {
         )
     }
     
+    private var showTitleError: Bool {
+
+        hasTriedSave &&
+        title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ).isEmpty
+    }
+    private var titleValidationColor: Color {
+        showTitleError
+        ? .red.opacity(0.7)
+        : .clear
+    }
+    
     private var saveButton: some View {
 
-        Button {
-            saveEntry()
-        } label: {
-            
-            Text("Save Entry")
-                .fontWeight(.bold)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(AppColor.primary)
-                .foregroundStyle(.white)
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 20)
-                )
+        VStack(spacing: 8) {
+
+            Button {
+
+                hasTriedSave = true
+
+                if canSave {
+                    saveEntry()
+                }
+
+            } label: {
+
+                Text("Save Entry")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        canSave
+                        ? AppColor.primary
+                        : Color.gray.opacity(0.3)
+                    )
+            )
+
+            if hasTriedSave && !canSave {
+
+                Text(validationMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .background(
-            canSave
-            ? AppColor.primary
-            : Color.gray.opacity(0.3)
-        )
-        .disabled(!canSave)
     }
+    let selectedGoal: LearningGoal?
+    
 }
 
 

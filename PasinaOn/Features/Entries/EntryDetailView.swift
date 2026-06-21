@@ -107,7 +107,8 @@ struct EntryDetailView: View {
                     Text(
                         "This action cannot be undone."
                     )
-                }}
+                }
+            }
             
         }
     }
@@ -167,31 +168,58 @@ struct EntryDetailView: View {
     }
     
     private var statusBadge: some View {
-        
-        HStack(spacing: 6) {
-            
-            Image(
-                systemName: entry.isCompleted
-                ? "checkmark.circle.fill"
-                : "clock.fill"
-            )
-            
-            Text(
+
+        Menu {
+
+            Button("Mark as Completed") {
+
+                entry.isCompleted = true
+
+                do {
+                    try modelContext.save()
+                } catch {
+                    print(error)
+                }
+            }
+
+            Button("Mark as In Progress") {
+
+                entry.isCompleted = false
+
+                do {
+                    try modelContext.save()
+                } catch {
+                    print(error)
+                }
+            }
+
+        } label: {
+
+            HStack(spacing: 6) {
+
+                Image(
+                    systemName: entry.isCompleted
+                    ? "checkmark.circle.fill"
+                    : "clock.fill"
+                )
+
+                Text(
+                    entry.isCompleted
+                    ? "Completed"
+                    : "In Progress"
+                )
+            }
+            .font(.headline)
+            .foregroundStyle(
                 entry.isCompleted
-                ? "Completed"
-                : "In Progress"
+                ? .green
+                : .orange
             )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.white.opacity(0.2))
+            .clipShape(Capsule())
         }
-        .font(.headline)
-        .foregroundStyle(
-            entry.isCompleted
-            ? .green
-            : .orange
-        )
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.white.opacity(0.2))
-        .clipShape(Capsule())
     }
     
     private var reflectionCard: some View {

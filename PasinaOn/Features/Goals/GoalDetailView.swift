@@ -11,7 +11,13 @@ struct GoalDetailView: View {
     @Query
     private var entries: [LearningEntry]
     let goal: LearningGoal
-    
+    @State private var showDeleteAlert = false
+
+    @Environment(\.dismiss)
+    private var dismiss
+
+    @Environment(\.modelContext)
+    private var modelContext
     var body: some View {
         
         //        goalDetailHeader
@@ -25,28 +31,100 @@ struct GoalDetailView: View {
 
                 entriesChecklistCard
 
-                progressStatusCard
+//                goalStatusCard
             }
             .padding()
+            
         }
         .navigationBarTitleDisplayMode(.inline)
         
         .toolbar {
-            
             ToolbarItem(
                 placement: .topBarTrailing
             ) {
-                
+
                 NavigationLink {
-                    
-                    GoalEditView(
-                        goal: goal
+
+                    EntryFormView(
+                        selectedGoal: goal
                     )
-                    
+
                 } label: {
-                    
-                    Text("Edit")
-                        .fontWeight(.semibold)
+
+                    Image(systemName: "plus")
+                }
+            }
+            ToolbarItem(
+                placement: .topBarTrailing
+            ) {
+
+                Menu {
+
+                    NavigationLink {
+
+                        GoalEditView(
+                            goal: goal
+                        )
+
+                    } label: {
+
+                        Label(
+                            "Edit Goal",
+                            systemImage: "pencil"
+                        )
+                    }
+
+                    Button(
+                        role: .destructive
+                    ) {
+
+                        showDeleteAlert = true
+
+                    } label: {
+
+                        Label(
+                            "Delete Goal",
+                            systemImage: "trash"
+                        )
+                    }
+
+                } label: {
+
+                    Image(
+                        systemName: "ellipsis.circle"
+                    )
+                }
+                .alert(
+                    "Delete Goal?",
+                    isPresented: $showDeleteAlert
+                ) {
+
+                    Button(
+                        "Delete",
+                        role: .destructive
+                    ) {
+
+                        modelContext.delete(goal)
+
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            print(error)
+                        }
+
+                        dismiss()
+                    }
+
+                    Button(
+                        "Cancel",
+                        role: .cancel
+                    ) { }
+
+                } message: {
+
+                    Text(
+                        "This action cannot be undone."
+                    )
                 }
             }
         }
@@ -170,6 +248,46 @@ struct GoalDetailView: View {
             to: goal.targetDate
         ).day ?? 0
     }
+    
+    private var goalStatusTitle: String {
+
+        if progress >= 1 {
+            return "Completed"
+        }
+
+        if goalEntries.isEmpty {
+            return "No Activity Yet"
+        }
+
+        return "In Progress"
+    }
+
+    private var goalStatusEmoji: String {
+
+        if progress >= 1 {
+            return "🏆"
+        }
+
+        if goalEntries.isEmpty {
+            return "⚠️"
+        }
+
+        return "🔥"
+    }
+
+    private var goalStatusDescription: String {
+
+        if progress >= 1 {
+            return "Congratulations! This goal has been completed."
+        }
+
+        if goalEntries.isEmpty {
+            return "Start adding learning entries to make progress."
+        }
+
+        return "\(completedEntries) of \(goalEntries.count) entries completed."
+    }
+    
     private var entriesChecklistCard: some View {
 
         VStack(
@@ -177,41 +295,99 @@ struct GoalDetailView: View {
             spacing: 16
         ) {
 
-            Text("LEARNING ENTRIES")
-                .font(.headline)
+            HStack {
+
+                Text("Learning Entries")
+                    .font(.headline)
+
+                Spacer()
+
+
+                Text("\(goalEntries.count)")
+                    .foregroundStyle(.secondary)
+            }
 
             if goalEntries.isEmpty {
 
-                ContentUnavailableView(
-                    "No Entries Yet",
-                    systemImage: "book.closed",
-                    description: Text(
+                ContentUnavailableView {
+
+                    Label(
+                        "No Entries Yet",
+                        systemImage: "book.closed"
+                    )
+
+                } description: {
+
+                    Text(
                         "Add learning entries related to this goal."
                     )
-                )
+
+                } actions: {
+
+                    NavigationLink {
+
+                        EntryFormView(
+                            selectedGoal: goal
+                        )
+
+                    } label: {
+
+                        Label(
+                            "Add Entry",
+                            systemImage: "plus"
+                        )
+                    }
+                }
 
             } else {
 
                 ForEach(goalEntries) { entry in
 
-                    HStack {
+                    NavigationLink {
 
-                        Image(
-                            systemName:
-                            entry.isCompleted
-                            ? "checkmark.circle.fill"
-                            : "circle"
-                        )
-                        .foregroundStyle(
-                            entry.isCompleted
-                            ? .green
-                            : .secondary
+                        EntryDetailView(
+                            entry: entry
                         )
 
-                        Text(entry.title)
+                    } label: {
 
-                        Spacer()
+                        HStack {
+
+                            Image(
+                                systemName:
+                                entry.isCompleted
+                                ? "checkmark.circle.fill"
+                                : "circle"
+                            )
+                            .foregroundStyle(
+                                entry.isCompleted
+                                ? .green
+                                : .secondary
+                            )
+
+                            VStack(
+                                alignment: .leading
+                            ) {
+
+                                Text(entry.title)
+
+                                Text(
+                                    entry.date.formatted(
+                                        date: .abbreviated,
+                                        time: .omitted
+                                    )
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -224,23 +400,24 @@ struct GoalDetailView: View {
         )
     }
     
-    private var progressStatusCard: some View {
+    private var goalStatusCard: some View {
 
         HStack {
 
-            Text("✅")
+            Text(goalStatusEmoji)
                 .font(.largeTitle)
 
             VStack(alignment: .leading) {
 
-                Text("Completion Rate")
+                Text("Goal Status")
                     .font(.title3)
                     .fontWeight(.bold)
 
-                Text(
-                    "\(completedEntries) of \(goalEntries.count) entries completed"
-                )
-                .foregroundStyle(.secondary)
+                Text(goalStatusTitle)
+                    .font(.headline)
+
+                Text(goalStatusDescription)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -253,6 +430,7 @@ struct GoalDetailView: View {
             RoundedRectangle(cornerRadius: 24)
         )
     }
+    
 }
 
     let previewGoal = LearningGoal(

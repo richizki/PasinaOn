@@ -19,14 +19,18 @@ struct DashboardView: View {
         sort: \LearningEntry.date,
         order: .reverse
     )
+    
     private var entries: [LearningEntry]
+    
+    @Environment(\.dynamicTypeSize)
+    private var dynamicTypeSize
+    
     var body: some View {
         VStack(spacing: 24) {
             dashboardHeader
             
             ScrollView {
-                NavigationLink {
-                    
+                VStack(spacing: 32) {
                     if let currentGoal {
                         
                         NavigationLink {
@@ -39,19 +43,21 @@ struct DashboardView: View {
                             
                             goalCard
                         }
+                        .buttonStyle(.plain)
+                        
+                    } else {
+                        
+                        goalCard
                     }
-                } label: {
-                    
-                    goalCard
+                    statsSection
+                    weeklyActivity
+                    quickActions
+                    recentEntries
                 }
-                .buttonStyle(.plain)
-                statsSection
-                weeklyActivity
-                quickActions
-                recentEntries
             }
         }
         .padding()
+        .dynamicTypeSize(.xSmall ... .accessibility5)
         .navigationBarTitleDisplayMode(.inline)
     }
     private var currentGoal: LearningGoal? {
@@ -65,6 +71,7 @@ struct DashboardView: View {
     private var completedEntries: Int {
         entries.filter { $0.isCompleted }.count
     }
+    
     private func goalEntries(
         for goal: LearningGoal
     ) -> [LearningEntry] {
@@ -98,6 +105,29 @@ struct DashboardView: View {
         ) / Double(entries.count)
     }
     
+    private func entriesCountForDayOffset(
+        _ offset: Int
+    ) -> Int {
+
+        let calendar = Calendar.current
+
+        guard let targetDate = calendar.date(
+            byAdding: .day,
+            value: -offset,
+            to: Date()
+        ) else {
+            return 0
+        }
+
+        return entries.filter {
+
+            calendar.isDate(
+                $0.date,
+                inSameDayAs: targetDate
+            )
+
+        }.count
+    }
     
     private var dashboardHeader: some View {
         HStack(alignment: .top){
@@ -105,8 +135,14 @@ struct DashboardView: View {
                 Text("Learning Journal")
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .font(.largeTitle)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
                 Text("Keep growing every day")
                     .foregroundStyle(.secondary)
+                    .font(.body)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
             }
             
             Spacer()
@@ -121,31 +157,67 @@ struct DashboardView: View {
     }
     
     private var goalCard: some View {
-        VStack(alignment: .leading, spacing: 20){
-            Text("Current Goal")
-                .font(.caption)
-                .fontWeight(.bold)
-            Text(currentGoal?.title ?? "No Goal Yet")
-                .font(.title2)
-                .fontWeight(.bold)
-            HStack(spacing: 12){
-                Text(
-                    "\(completedGoalEntries(for: currentGoal!))/\(goalEntries(for: currentGoal!).count) completed"
+
+        VStack(alignment: .leading, spacing: dynamicTypeSize.isAccessibilitySize ? 24 : 20) {
+
+            if let currentGoal {
+
+                Text("Current Goal")
+                    .fontWeight(.bold)
+                    .font(.caption)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+
+                Text(currentGoal.title)
+                    .fontWeight(.bold)
+                    .font(.title2)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+                HStack(spacing: 12) {
+
+                    Text(
+                        "\(completedGoalEntries(for: currentGoal))/\(goalEntries(for: currentGoal).count) completed"
+                    )
+                    .font(.caption)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+
+                    Spacer()
+
+                    Text(
+                        "\(Int(progress(for: currentGoal) * 100))%"
+                    )
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                }
+
+                ProgressView(
+                    value: progress(for: currentGoal)
                 )
-                Spacer()
-                Text(
-                    "\(Int(progress(for: currentGoal!) * 100))%"
-                )
-                .font(.largeTitle)
-                .fontWeight(.bold)
+                .tint(.white)
+
+            } else {
+
+                Text("Current Goal")
+                    .fontWeight(.bold)
+                    .font(.caption)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+
+                Text("No Goal Yet")
+                    .fontWeight(.bold)
+                    .font(.title2)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
+
+                Text("Create your first learning goal")
+                    .foregroundStyle(.white.opacity(0.8))
+                    .font(.caption)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
             }
-            ProgressView(
-                value: progress(
-                    for: currentGoal!
-                )
-            )
-            .tint(.white)
-            
         }
         .padding()
         .foregroundStyle(.white)
@@ -156,57 +228,85 @@ struct DashboardView: View {
                 startPoint: .leading,
                 endPoint: .trailing
             )
-            .clipShape(
-                RoundedRectangle(cornerRadius: 24)
-            )
+        )
+        .clipShape(
+            RoundedRectangle(cornerRadius: 24)
         )
     }
     
     private var statsSection: some View {
-        
-        HStack(spacing: 16) {
-            NavigationLink {
-                
-                StatisticsView()
-                
-            } label: {
-                
-                streakCard
+
+        Group {
+
+            if dynamicTypeSize.isAccessibilitySize {
+
+                VStack(spacing: 16) {
+
+                    NavigationLink {
+                        StatisticsView()
+                    } label: {
+                        streakCard
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        StatisticsView()
+                    } label: {
+                        summaryCard
+                    }
+                    .buttonStyle(.plain)
+                }
+
+            } else {
+
+                HStack(spacing: 16) {
+
+                    NavigationLink {
+                        StatisticsView()
+                    } label: {
+                        streakCard
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        StatisticsView()
+                    } label: {
+                        summaryCard
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .buttonStyle(.plain)
-            NavigationLink {
-                
-                StatisticsView()
-                
-            } label: {
-                
-                summaryCard
-            }
-            .buttonStyle(.plain)
         }
     }
     
     private var streakCard: some View {
-        VStack(alignment: .leading, spacing: 12){
-            Text("🔥")
-                .font(.largeTitle)
+        VStack(alignment: .leading, spacing: dynamicTypeSize.isAccessibilitySize ? 24 : 12){
+//            Text("🔥")
+//                .font(.largeTitle)
             
-            Text("12")
+            Text("\(streak)")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             
             Text("Day Streak")
                 .font(.headline)
             
-            Text("Best: 21 Days")
+            Text("Current Streak")
                 .foregroundStyle(.secondary)
+                .font(.caption)
             
             Spacer()
             HStack(spacing: 4){
                 ForEach(0..<7) { index in
                     
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(index == 4 ? .gray.opacity(0.3) : .orange)
+                        .fill(
+                            index < min(streak, 7)
+                            ? .orange
+                            : .gray.opacity(0.3)
+                        )
                         .frame(height: 8)
                 }
             }
@@ -217,53 +317,64 @@ struct DashboardView: View {
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }
     
+    
+    
     private var summaryCard: some View {
         
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: dynamicTypeSize.isAccessibilitySize ? 24 : 24) {
             
             HStack {
                 
                 Image(systemName: "book.fill")
+                    .font(.headline)
                     .foregroundStyle(.white)
-                    .padding(10)
+                    .frame(width: 44, height: 44)
                     .background(.purple)
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 10)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading) {
                     
                     Text("\(totalEntries)")
-                        .font(.title)
+                        .font(.largeTitle)
                         .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     
                     Text("Entries")
+                        .font(.headline)
                         .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.leading)
                 }
             }
             
             HStack {
                 
                 Image(systemName: "checkmark")
+                    .font(.headline)
                     .foregroundStyle(.white)
-                    .padding(10)
+                    .frame(width: 44, height: 44)
                     .background(.green)
-                    .clipShape(
-                        RoundedRectangle(cornerRadius: 10)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                
                 VStack(alignment: .leading) {
                     
                     Text("\(completedEntries)")
-                        .font(.title)
+                        .font(.largeTitle)
                         .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     
                     Text("Completed")
+                        .font(.headline)
                         .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.leading)
                 }
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 180)
+        .frame(maxWidth: .infinity, minHeight: 180, alignment: .leading)
         .padding()
-        .background(.white)
+        .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }
     
@@ -274,31 +385,58 @@ struct DashboardView: View {
             Text("This Week")
                 .font(.title3)
                 .fontWeight(.bold)
-            
-            HStack(alignment: .bottom, spacing: 12) {
-                
-                let heights: [CGFloat] = [60, 35, 75, 50, 20, 60, 35]
-                
-                ForEach(0..<7) { index in
-                    
+                .lineLimit(nil)
+                .multilineTextAlignment(.leading)
+
+            HStack(
+                alignment: .bottom,
+                spacing: 12
+            ) {
+
+                ForEach(0..<7, id: \.self) { index in
+
+                    let count = entriesCountForDayOffset(
+                        6 - index
+                    )
+
                     VStack {
-                        
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(
-                                index == 3
-                                ? Color.purple
-                                : Color.purple.opacity(0.15)
-                            )
-                            .frame(height: heights[index])
-                        
-                        Text(["M","T","W","T","F","S","S"][index])
+
+                        Text("\(count)")
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.center)
+
+                        RoundedRectangle(
+                            cornerRadius: 8
+                        )
+                        .fill(
+                            count > 0
+                            ? Color.purple
+                            : Color.purple.opacity(0.15)
+                        )
+                        .frame(
+                            height: max(
+                                CGFloat(count) * 20,
+                                20
+                            )
+                        )
+
+                        Text(
+                            dayLabelForOffset(
+                                6 - index
+                            )
+                        )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.center)
                     }
                 }
             }
         }
         .padding()
-        .background(.white)
+        .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }
     
@@ -339,42 +477,156 @@ struct DashboardView: View {
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(.white)
+                    .background(.background)
                     .clipShape(
                         RoundedRectangle(cornerRadius: 20)
                     )
             }
+            
         }
     }
     private var recentEntries: some View {
-        
-        VStack(spacing: 16) {
-            
-            ForEach(entries.prefix(3)) { entry in
-                
-                NavigationLink {
-                    
-                    EntryDetailView(
-                        entry: entry
-                    )
-                    
-                } label: {
-                    
-                    entryCard(
-                        title: entry.title,
-                        topic: entry.topic,
-                        date: entry.date.formatted(
-                            date: .abbreviated,
-                            time: .omitted
-                        ),
-                        status: entry.isCompleted
-                        ? "Done"
-                        : "In Progress"
-                    )
+
+        VStack(alignment: .leading, spacing: 16) {
+
+            Text("Recent Entries")
+                .font(.title3)
+                .fontWeight(.bold)
+                .lineLimit(nil)
+                .multilineTextAlignment(.leading)
+
+            if entries.isEmpty {
+
+                if goals.isEmpty {
+
+                    NavigationLink {
+
+                        GoalFormView()
+
+                    } label: {
+
+                        emptyStateCard(
+                            icon: "target",
+                            title: "No Goals Yet",
+                            message: "Create your first learning goal.",
+                            buttonTitle: "Create Goal"
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                } else {
+
+                    NavigationLink {
+
+                        EntryFormView()
+
+                    } label: {
+
+                        emptyStateCard(
+                            icon: "book.closed",
+                            title: "No Entries Yet",
+                            message: "Start documenting what you learn.",
+                            buttonTitle: "Create Entry"
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+
+            } else {
+
+                ForEach(entries.prefix(3)) { entry in
+
+                    NavigationLink {
+
+                        EntryDetailView(entry: entry)
+
+                    } label: {
+
+                        entryCard(
+                            title: entry.title,
+                            topic: entry.topic,
+                            date: entry.date.formatted(
+                                date: .abbreviated,
+                                time: .omitted
+                            ),
+                            status: entry.isCompleted
+                            ? "Done"
+                            : "In Progress"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    
+    private var streak: Int {
+
+        let calendar = Calendar.current
+
+        let dates = Set(
+            entries.map {
+                calendar.startOfDay(
+                    for: $0.date
+                )
+            }
+        )
+
+        guard let latestDate = dates.max()
+        else {
+            return 0
+        }
+
+        var currentDate = latestDate
+        var streak = 0
+
+        while dates.contains(currentDate) {
+
+            streak += 1
+
+            currentDate =
+            calendar.date(
+                byAdding: .day,
+                value: -1,
+                to: currentDate
+            )!
+        }
+
+        return streak
+    }
+    
+    private func dayLabelForOffset(
+        _ offset: Int
+    ) -> String {
+
+        let calendar = Calendar.current
+
+        guard let date = calendar.date(
+            byAdding: .day,
+            value: -offset,
+            to: Date()
+        ) else {
+            return ""
+        }
+
+        return date.formatted(
+            .dateTime.weekday(.narrow)
+        )
+    }
+    
+    private func entriesCountForWeekday(
+        _ weekday: Int
+    ) -> Int {
+
+        entries.filter {
+
+            Calendar.current.component(
+                .weekday,
+                from: $0.date
+            ) == weekday
+
+        }.count
     }
     
     private func entryCard(
@@ -399,6 +651,8 @@ struct DashboardView: View {
                 
                 Text(title)
                     .font(.headline)
+                    .lineLimit(nil)
+                    .multilineTextAlignment(.leading)
                 
                 HStack(spacing: 8) {
                     
@@ -412,6 +666,8 @@ struct DashboardView: View {
                         .foregroundStyle(.secondary)
                 }
                 .font(.caption)
+                .lineLimit(nil)
+                .multilineTextAlignment(.leading)
             }
             
             Spacer()
@@ -428,9 +684,53 @@ struct DashboardView: View {
                 .clipShape(
                     Capsule()
                 )
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding()
-        .background(.white)
+        .background(.background)
+        .clipShape(
+            RoundedRectangle(cornerRadius: 20)
+        )
+    }
+    private func emptyStateCard(
+        icon: String,
+        title: String,
+        message: String,
+        buttonTitle: String
+    ) -> some View {
+
+        VStack(spacing: 12) {
+
+            Image(systemName: icon)
+                .font(.largeTitle)
+                .foregroundStyle(.purple)
+
+            Text(title)
+                .font(.headline)
+                .lineLimit(nil)
+                .multilineTextAlignment(.center)
+
+            Text(message)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(nil)
+
+            Text(buttonTitle)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.purple)
+                .foregroundStyle(.white)
+                .clipShape(Capsule())
+                .lineLimit(nil)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .background(Color(.secondarySystemBackground))
         .clipShape(
             RoundedRectangle(cornerRadius: 20)
         )

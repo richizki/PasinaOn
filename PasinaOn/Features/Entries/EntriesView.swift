@@ -271,9 +271,9 @@ struct EntriesView: View {
         
         HStack(spacing: 16) {
             
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.purple.opacity(0.15))
-                .frame(width: 72, height: 72)
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.purple.opacity(0.2))
+                .frame(width: 56, height: 56)
                 .overlay {
                     
                     Image(systemName: "text.book.closed.fill")
@@ -282,26 +282,28 @@ struct EntriesView: View {
             
             VStack(
                 alignment: .leading,
-                spacing: 8
+                spacing: 6
             ) {
-                
+
                 Text(title)
                     .font(.headline)
-                
-                HStack {
-                    
+
+                HStack(spacing: 8) {
+
                     Text(topic)
-                        .foregroundStyle(.purple)
-                    
+                        .foregroundStyle(.secondary)
+
+                    Text("•")
+
                     Text(date)
                         .foregroundStyle(.secondary)
                 }
                 .font(.caption)
             }
-            
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
             
             Text(status)
+                .fixedSize()
                 .font(.caption)
                 .fontWeight(.semibold)
                 .padding(.horizontal, 12)
@@ -314,9 +316,9 @@ struct EntriesView: View {
                 .clipShape(Capsule())
         }
         .padding()
-        .background(.white)
+        .background(.background)
         .clipShape(
-            RoundedRectangle(cornerRadius: 24)
+            RoundedRectangle(cornerRadius: 20)
         )
     }
 }

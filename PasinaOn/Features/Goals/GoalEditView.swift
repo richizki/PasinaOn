@@ -110,13 +110,13 @@ struct GoalEditView: View {
     }
     private var goalInformationSection: some View {
         
-        Section("GOAL INFORMATION") {
+        Section("Goal Information") {
             
             TextField(
                 "Goal Title",
                 text: $title
             )
-            
+            .disabled(true)
             TextField(
                 "Description",
                 text: $goalDescription,
@@ -127,7 +127,7 @@ struct GoalEditView: View {
     }
     private var targetDateSection: some View {
         
-        Section("TARGET DATE") {
+        Section("Target Date") {
             
             DatePicker(
                 "Target Date",

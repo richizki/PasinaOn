@@ -17,6 +17,7 @@ struct EntryEditView: View {
     @State private var reflection: String
     @State private var date: Date
     @State private var isCompleted: Bool
+    @State private var hasTriedSave = false
     @State private var showDeleteAlert = false
 
     @Environment(\.dismiss) private var dismiss
@@ -108,36 +109,55 @@ struct EntryEditView: View {
 
                 Button("Save") {
 
-                    entry.title = title
-                    entry.topic = topic
-                    entry.reflection = reflection
-                    entry.date = date
-                    entry.isCompleted = isCompleted
+                    hasTriedSave = true
 
-                    do {
-                        try modelContext.save()
-                    } catch {
-                        print(error)
+                    if canSave {
+
+                        entry.title = title
+                        entry.topic = topic
+                        entry.reflection = reflection
+                        entry.date = date
+                        entry.isCompleted = isCompleted
+
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            print(error)
+                        }
+
+                        dismiss()
                     }
-
-                    dismiss()
                 }
-                .disabled(!canSave)
                 .fontWeight(.semibold)
             }
         }
     }
     private var learningInformationSection: some View {
 
-        Section("LEARNING INFORMATION") {
+        VStack(
+            alignment: .leading,
+            spacing: 16
+        ) {
+
+            Text("Learning Information")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
 
             TextField(
-                "Title",
+                "What did you work on?",
                 text: $title
             )
+            .textFieldStyle(.roundedBorder)
 
             topicSelector
         }
+        .padding()
+        .background(AppColor.cardBackground)
+        .clipShape(
+            RoundedRectangle(cornerRadius: 24)
+        )
+        
     }
 
     private var topicSelector: some View {
@@ -146,99 +166,141 @@ struct EntryEditView: View {
             alignment: .leading,
             spacing: 12
         ) {
+
+            Text("Topic")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
+
             if goals.isEmpty {
 
                 Text("Create a goal first before editing entries.")
                     .foregroundStyle(.secondary)
 
             } else {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 100))
-                    ]
-                ) {
-                    
-                    ForEach(goals) { goal in
-                        
-                        Button {
-                            
-                            topic = goal.title
-                            
-                        } label: {
-                            
-                            Text(goal.title)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(
-                                    topic == goal.title
-                                    ? .white
-                                    : .primary
-                                )
-                                .padding(.horizontal)
-                                .padding(.vertical, 12)
-                                .background(
-                                    topic == goal.title
-                                    ? AppColor.primary
-                                    : AppColor.surfaceBackground
-                                )
-                                .clipShape(Capsule())
+
+    
+                    FlowLayout {
+                        ForEach(goals) { goal in
+
+                            Button {
+                                topic = goal.title
+                            } label: {
+
+                                Text(goal.title)
+                                    .fontWeight(.semibold)
+                                    .lineLimit(1)
+                                    .foregroundStyle(
+                                        topic == goal.title
+                                        ? .white
+                                        : .primary
+                                    )
+                                    .padding(.horizontal)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        topic == goal.title
+                                        ? AppColor.primary
+                                        : AppColor.surfaceBackground
+                                    )
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
-                }
+
+                
             }
         }
     }
     
     private var reflectionSection: some View {
 
-        Section("REFLECTION") {
+        VStack(
+            alignment: .leading,
+            spacing: 16
+        ) {
+
+            Text("Reflection")
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundStyle(.secondary)
 
             TextEditor(
                 text: $reflection
             )
-            .frame(minHeight: 200)
+            .frame(minHeight: 180)
+            .scrollContentBackground(.hidden)
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(.systemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(
+                        Color.gray.opacity(0.2),
+                        lineWidth: 1
+                    )
+            )
         }
+        .padding()
+        .background(AppColor.cardBackground)
+        .clipShape(
+            RoundedRectangle(cornerRadius: 24)
+        )
     }
+    
     private var dateStatusSection: some View {
 
-        Section("DATE & STATUS") {
+        VStack(spacing: 20) {
 
             DatePicker(
                 "Date",
                 selection: $date,
                 displayedComponents: .date
             )
+            .datePickerStyle(.compact)
 
             Toggle(
-                "Completed",
+                "Completed Session",
                 isOn: $isCompleted
             )
-
-            Text(
-                "Mark this session as complete to track your progress."
-            )
-            .font(.footnote)
-            .foregroundStyle(.secondary)
         }
+        .padding()
+        .background(AppColor.cardBackground)
+        .clipShape(
+            RoundedRectangle(cornerRadius: 24)
+        )
     }
+    
     private var deleteSection: some View {
 
-        Section {
+        VStack(spacing: 8) {
 
-            Button(
-                "Delete Entry",
-                role: .destructive
-            ) {
+            VStack {
 
-                showDeleteAlert = true
+                Button(
+                    "Delete Entry",
+                    role: .destructive
+                ) {
+
+                    showDeleteAlert = true
+                }
             }
-
-        } footer: {
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(AppColor.cardBackground)
+            .clipShape(
+                RoundedRectangle(cornerRadius: 24)
+            )
 
             Text(
                 "This action cannot be undone."
             )
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
     }
+    
     private var canSave: Bool {
 
         !title.trimmingCharacters(

@@ -76,7 +76,7 @@ struct GoalFormView: View {
     
     private var goalInformationSection: some View {
 
-        Section("GOAL INFORMATION") {
+        Section("Goal Information") {
 
             TextField(
                 "Goal Title",
@@ -94,7 +94,7 @@ struct GoalFormView: View {
     
     private var targetDateSection: some View {
 
-        Section("TARGET DATE") {
+        Section("Target Date") {
 
             DatePicker(
                 "Target Date",
